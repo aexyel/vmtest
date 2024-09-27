@@ -7,9 +7,9 @@
 ## Run
 
 `
-# make image
-# make ftp
-# make install
-# make vmd
-# make run
+make image
+make ftp
+make install
+make vmd
+make run
 `
