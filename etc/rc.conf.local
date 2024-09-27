@@ -1,0 +1,8 @@
+cron_flags=NO
+inetd_flags=NO
+library_aslr=NO
+ntpd_flags=NO
+pflogd_flags=NO
+slaacd_flags=NO
+smtpd_flags=NO
+sndiod_flags=NO
