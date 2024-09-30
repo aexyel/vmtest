@@ -52,6 +52,7 @@ install:
 	installboot -r mnt vnd0
 	cd mnt/dev && sh MAKEDEV all
 	rm -rf mnt/usr/share/relink/kernel/
+	chmod 1777 mnt/tmp
 	sync
 	umount mnt
 	vnconfig -u $$(<vnd)
