@@ -8,10 +8,11 @@ PASSWORD = "\$$2b\$$08\$$YJWlxUbhzxR6jBJBJzbiH.BK.NkW6EgbXBE3HhW63wS6ICnIr8Iae"
 all:
 	@echo 'Usage:'
 	@echo ' make [ edit | status ] - edit Makefile, show image|vm status'
-	@echo ' make [ image | convert | mount | fsck | umount | uconfig ]'
+	@echo ' make [ delete | image | mount | fsck | umount | uconfig ] - image file operations'
 	@echo ' make [ ftp | install ] - get files, install vm'
 	@echo ' make password - set root password'
 	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
+	@echo ' make [ delq | convert | runq ] - convert img to qcow2, start vm'
 
 status:
 	mount
@@ -82,9 +83,6 @@ password:
 	rm vnd
 	rm -rf mnt
 
-convert:
-	vmctl create -i ${NAME}.qcow2 ${NAME}.img
-
 fsck:
 	vnconfig ${NAME}.img >vnd
 	fsck -fy /dev/$$(<vnd)a
@@ -128,6 +126,15 @@ mountrd:
 	#chmod 666 bsd.rd
 	rm -rf mnt ramdisk
 
+delete:
+	rm ${NAME}.img
+
+delq:
+	rm ${NAME}.qcow2
+
+convert:
+	vmctl create -i ${NAME}.img ${NAME}.qcow2
+
 vmd:
 	rcctl -f start vmd
 	sysctl net.inet.ip.forwarding=1
@@ -141,6 +148,14 @@ run:
 	@echo ====================
 	@##vmctl start -c -m 64M -L -d ${NAME}.img "${NAME}"
 	vmctl start -c -m 256M -L -d ${NAME}.img "${NAME}"
+
+runq:
+	@echo ====================
+	@echo  Login: root
+	@echo  Your password hash: ${PASSWORD}
+	@echo  Exit: ~.
+	@echo ====================
+	vmctl start -c -m 256M -L -d ${NAME}.qcow2 "${NAME}"
 
 stop:
 	vmctl stop "${NAME}"
