@@ -5,6 +5,7 @@ NAME = vmtest
 
 # root:
 PASSWORD = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
+PUBKEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCh0ddvGotNVZRAEaggMcQg9DX5NdhzLOM9VrV0+uaSyhTGVNK2LYjDcaPQEVlLCP3qPysd40GEH5g8RE+5KLnseLncMMHhucqW5HKw1qsl4zfnRezEUtadFhbgJDQsJFCxLuKHpAOmhEoCFKaAIp+QJnsyTpSXqfI2k5Wn8HL1hwkNsKWQO/s50eb2KYthgvkIe5VJtScrOIAG57vZis/tvFwN4+OpZ+GM/o6H2I3JRehs0yvJsx/78pvZSF1krZo60rUVzbbkGGklw9nSEDIP48MHGeTbOET/AWprpRQKCpb9ZelEAfDIP6nqJw82dCqh44IlJwfJNxil0A1JcpjmXwJrBgdqIzJ8+W3oZ/1oveDNCWDeZjI3AT84yjfyEvffSfMPHEFBjKLp4vKn3AuYqH41m1VpXD+5QB9Kld7sDmZYdKhlH9Mk4wGXg55JfiVwsrhz8dISnpz0MhTqHWmgfOkIwod77CystSg6T69mRI/PY9qGqOlzL5KrJRZvrU8="
 
 # adduser:
 USER = test
@@ -86,6 +87,7 @@ password:
 	chroot mnt/ usermod -p ${PASSWORD} root
 	@#head -n 1 mnt/etc/master.passwd
 	fgrep -i root < mnt/etc/master.passwd
+	echo ${PUBKEY} >> mnt/root/.ssh/authorized_keys
 	sync
 	umount mnt
 	vnconfig -u $$(<vnd)
@@ -96,6 +98,7 @@ adduser:
 	mkdir -p mnt
 	vnconfig ${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
+	rm -rf mnt/home/${USER}
 	chroot mnt/ adduser -batch ${USER} users ${USER} ${UPASS} -q -noconfig
 	fgrep -i ${USER} < mnt/etc/master.passwd
 	chroot mnt/ usermod -G wheel ${USER}
