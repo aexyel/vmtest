@@ -2,7 +2,13 @@ NAME = vmtest
 
 # encrypt _password_
 # use escaped double dollar \$$
-PASSWORD = "\$$2b\$$08\$$YJWlxUbhzxR6jBJBJzbiH.BK.NkW6EgbXBE3HhW63wS6ICnIr8Iae"
+
+# root:
+PASSWORD = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
+
+# adduser:
+USER = test
+UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 
 
 all:
@@ -11,6 +17,7 @@ all:
 	@echo ' make [ delete | image | mount | fsck | umount | uconfig ] - image file operations'
 	@echo ' make [ ftp | install ] - get files, install vm'
 	@echo ' make password - set root password'
+	@echo ' make adduser - add user and doas.conf'
 	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
 	@echo ' make [ delq | convert | runq ] - convert img to qcow2, start vm'
 
@@ -63,7 +70,8 @@ install:
 	rm -rf mnt/usr/share/relink/kernel/
 	chmod 1777 mnt/tmp
 	chroot mnt/ usermod -p ${PASSWORD} root
-	head -n 1 mnt/etc/master.passwd
+	@#head -n 1 mnt/etc/master.passwd
+	fgrep -i root < mnt/etc/master.passwd
 	chroot mnt/ pkg_add -D snap unzip--iconv mc
 	sync
 	umount mnt
@@ -76,7 +84,24 @@ password:
 	vnconfig ${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
 	chroot mnt/ usermod -p ${PASSWORD} root
-	head -n 1 mnt/etc/master.passwd
+	@#head -n 1 mnt/etc/master.passwd
+	fgrep -i root < mnt/etc/master.passwd
+	sync
+	umount mnt
+	vnconfig -u $$(<vnd)
+	rm vnd
+	rm -rf mnt
+
+adduser:
+	mkdir -p mnt
+	vnconfig ${NAME}.img >vnd
+	mount -w /dev/$$(<vnd)a mnt
+	chroot mnt/ adduser -batch ${USER} users ${USER} ${UPASS} -q -noconfig
+	fgrep -i ${USER} < mnt/etc/master.passwd
+	chroot mnt/ usermod -G wheel ${USER}
+	echo "permit keepenv persist :wheel" > mnt/etc/doas.conf
+	chmod 600 mnt/etc/doas.conf
+	chmod u+s mnt/usr/bin/doas
 	sync
 	umount mnt
 	vnconfig -u $$(<vnd)
