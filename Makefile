@@ -21,6 +21,7 @@ all:
 	@echo ' make adduser - add user and doas.conf'
 	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
 	@echo ' make [ delq | convert | runq ] - convert img to qcow2, start vm'
+	@echo ' make [ clones | runc ] - create qcow2 overlays, start TWO VMs'
 
 status:
 	mount
@@ -50,6 +51,21 @@ image:
 	sync
 	vnconfig -u $$(<vnd)
 	rm vnd
+
+#imagex:
+#	vmctl create -s 1.5G ${NAME}x.img
+#	vnconfig ${NAME}x.img >vnd
+#	fdisk -iy $$(<vnd)
+#	echo 'RAID *' | disklabel -wAT- $$(<vnd)
+#	bioctl -c C -l $$(<vnd)a softraid0
+#	@# softraid0: CRYPTO volume attached as sd1
+#	mc
+#	#vi disklabel.auto
+#	disklabel -T disklabel.auto -F etc/fstab -w -A $$(<vnd)
+#	newfs $$(<vnd)a
+#	sync
+#	vnconfig -u $$(<vnd)
+#	rm vnd
 
 install:
 	mkdir -p mnt
@@ -158,10 +174,14 @@ delete:
 	rm ${NAME}.img
 
 delq:
-	rm ${NAME}.qcow2
+	rm *.qcow2
 
 convert:
 	vmctl create -i ${NAME}.img ${NAME}.qcow2
+
+clones:
+	vmctl create -b ${NAME}.qcow2 ${NAME}1.qcow2
+	vmctl create -b ${NAME}.qcow2 ${NAME}2.qcow2
 
 vmd:
 	rcctl -f start vmd
@@ -184,6 +204,12 @@ runq:
 	@echo  Exit: ~.
 	@echo ====================
 	vmctl start -c -m 256M -L -d ${NAME}.qcow2 "${NAME}"
+
+runc:
+	tmux \
+	new-session  'vmctl start -c -m 256M -L -d ${NAME}1.qcow2 "${NAME}1"' \; \
+	split-window -h 'vmctl start -c -m 256M -L -d ${NAME}2.qcow2 "${NAME}2"'
+	@## vmctl start -c -m 256M -L -d ${NAME}.qcow2 "${NAME}"
 
 stop:
 	vmctl stop "${NAME}"
