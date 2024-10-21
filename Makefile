@@ -72,8 +72,8 @@ install:
 	vnconfig ${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
 	rm -rf mnt/etc
-	tar -C mnt -xzf base7*.tgz
-	tar -C mnt -xzf mnt/var/sysmerge/etc.tgz
+	tar -C mnt -xzphf base7*.tgz
+	tar -C mnt -xzphf mnt/var/sysmerge/etc.tgz
 	@#mc
 	cp bsd mnt/
 	cp bsd.rd mnt/
@@ -85,7 +85,7 @@ install:
 	installboot -v -r mnt/ $$(<vnd)
 	cd mnt/dev && sh MAKEDEV all
 	rm -rf mnt/usr/share/relink/kernel/
-	chmod 1777 mnt/tmp
+	##chmod 1777 mnt/tmp
 	chroot mnt/ usermod -p ${PASSWORD} root
 	@#head -n 1 mnt/etc/master.passwd
 	fgrep -i root < mnt/etc/master.passwd
@@ -120,7 +120,7 @@ adduser:
 	chroot mnt/ usermod -G wheel ${USER}
 	echo "permit keepenv persist :wheel" > mnt/etc/doas.conf
 	chmod 600 mnt/etc/doas.conf
-	chmod u+s mnt/usr/bin/doas
+	##chmod u+s mnt/usr/bin/doas
 	sync
 	umount mnt
 	vnconfig -u $$(<vnd)
