@@ -1,16 +1,24 @@
 NAME = vmtest
 
+# uncomment USEFDE to use image encryption
+#USEFDE = yes
+#FDEPASSWORD = password
+
 # encrypt _password_
 # use escaped double dollar \$$
 
-# root:
+# include root settings while install:
+ADDROOT = yes
 PASSWORD = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 PUBKEY = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCh0ddvGotNVZRAEaggMcQg9DX5NdhzLOM9VrV0+uaSyhTGVNK2LYjDcaPQEVlLCP3qPysd40GEH5g8RE+5KLnseLncMMHhucqW5HKw1qsl4zfnRezEUtadFhbgJDQsJFCxLuKHpAOmhEoCFKaAIp+QJnsyTpSXqfI2k5Wn8HL1hwkNsKWQO/s50eb2KYthgvkIe5VJtScrOIAG57vZis/tvFwN4+OpZ+GM/o6H2I3JRehs0yvJsx/78pvZSF1krZo60rUVzbbkGGklw9nSEDIP48MHGeTbOET/AWprpRQKCpb9ZelEAfDIP6nqJw82dCqh44IlJwfJNxil0A1JcpjmXwJrBgdqIzJ8+W3oZ/1oveDNCWDeZjI3AT84yjfyEvffSfMPHEFBjKLp4vKn3AuYqH41m1VpXD+5QB9Kld7sDmZYdKhlH9Mk4wGXg55JfiVwsrhz8dISnpz0MhTqHWmgfOkIwod77CystSg6T69mRI/PY9qGqOlzL5KrJRZvrU8="
 
 # adduser:
+ADDUSER = yes
 USER = test
 UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 
+# add packages:
+##ADDPKG = unzip--iconv mc
 
 all:
 	@echo 'Usage:'
@@ -22,6 +30,9 @@ all:
 	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
 	@echo ' make [ delq | convert | runq ] - convert img to qcow2, start vm'
 	@echo ' make [ clones | runc ] - create qcow2 overlays, start TWO VMs'
+	@echo ''
+	@echo 'You have to set configuration variables on top of Makefile.'
+	@echo 'And review disklabel.auto template file.'
 
 status:
 	mount
@@ -44,34 +55,23 @@ ftp:
 image:
 	vmctl create -s 1.5G ${NAME}.img
 	vnconfig ${NAME}.img >vnd
+	@cat vnd
 	fdisk -iy $$(<vnd)
 	#vi disklabel.auto
 	disklabel -T disklabel.auto -F etc/fstab -w -A $$(<vnd)
+	cat etc/fstab
 	newfs $$(<vnd)a
 	sync
 	vnconfig -u $$(<vnd)
-	rm vnd
-
-#imagex:
-#	vmctl create -s 1.5G ${NAME}x.img
-#	vnconfig ${NAME}x.img >vnd
-#	fdisk -iy $$(<vnd)
-#	echo 'RAID *' | disklabel -wAT- $$(<vnd)
-#	bioctl -c C -l $$(<vnd)a softraid0
-#	@# softraid0: CRYPTO volume attached as sd1
-#	mc
-#	#vi disklabel.auto
-#	disklabel -T disklabel.auto -F etc/fstab -w -A $$(<vnd)
-#	newfs $$(<vnd)a
-#	sync
-#	vnconfig -u $$(<vnd)
-#	rm vnd
+	rm vnd*
 
 install:
 	mkdir -p mnt
 	vnconfig ${NAME}.img >vnd
+	@cat vnd
 	mount -w /dev/$$(<vnd)a mnt
 	rm -rf mnt/etc
+	@echo !!!! WAIT !!!!
 	tar -C mnt -xzphf base7*.tgz
 	tar -C mnt -xzphf mnt/var/sysmerge/etc.tgz
 	@#mc
@@ -82,18 +82,31 @@ install:
 	echo ${NAME}.my.domain > mnt/etc/myname
 	echo https://cdn.openbsd.org/pub/OpenBSD > mnt/etc/installurl
 	ln -fs /usr/share/zoneinfo/Europe/Moscow mnt/etc/localtime
-	installboot -v -r mnt/ $$(<vnd)
 	cd mnt/dev && sh MAKEDEV all
+	@##installboot -v -r mnt/ $$(<vnd)
+	chroot mnt/ installboot -v -r / $$(<vnd)
 	rm -rf mnt/usr/share/relink/kernel/
-	##chmod 1777 mnt/tmp
+	@##chmod 1777 mnt/tmp
+.ifdef ADDROOT
 	chroot mnt/ usermod -p ${PASSWORD} root
-	@#head -n 1 mnt/etc/master.passwd
 	fgrep -i root < mnt/etc/master.passwd
-	chroot mnt/ pkg_add -D snap unzip--iconv mc
-	sync
-	umount mnt
+	echo ${PUBKEY} >> mnt/root/.ssh/authorized_keys
+.endif
+.ifdef ADDUSER
+	rm -rf mnt/home/${USER}
+	chroot mnt/ adduser -batch ${USER} users ${USER} ${UPASS} -q -noconfig
+	fgrep -i ${USER} < mnt/etc/master.passwd
+	chroot mnt/ usermod -G wheel ${USER}
+	echo "permit keepenv persist :wheel" > mnt/etc/doas.conf
+	chmod 600 mnt/etc/doas.conf
+.endif
+.ifdef ADDPKG
+	chroot mnt/ pkg_add -D snap ${ADDPKG}
+.endif
+	sync && sync && sync
+	umount -f mnt
 	vnconfig -u $$(<vnd)
-	rm vnd
+	rm vnd*
 	rm -rf mnt
 
 password:
@@ -171,7 +184,7 @@ mountrd:
 	rm -rf mnt ramdisk
 
 delete:
-	rm ${NAME}.img
+	rm *.img
 
 delq:
 	rm *.qcow2
