@@ -1,0 +1,8 @@
+etc/fstab
+*.img
+*.qcow2
+base*.tgz
+bsd
+bsd.rd
+vnd*
+mnt/
