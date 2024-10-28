@@ -22,7 +22,7 @@ UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 
 # I have read Makefile and set my password and key above.
 # Uncomment LETMERUN:
-LETMERUN = yes
+##LETMERUN = yes
 
 all:
 	@echo 'Usage:'
