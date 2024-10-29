@@ -6,7 +6,7 @@
 
 * Networking (DNS on host, external access)
 * Install packages into VMs
-* Encryption
+* Encryption (WEIRD!)
 
 ## Run
 
