@@ -3,6 +3,14 @@ NAME = vmtest
 # uncomment USEFDE to use image encryption
 #USEFDE = yes
 #FDEPASSWORD = password
+# !!! WTF? !!! After error:
+# !!! WTF? !!! 	umount: /.../vmtest/mnt: Device busy
+# !!! WTF? !!! 	*** Error 1 in /.../vmtest (Makefile:nnn 'install')
+# !!! WTF? !!! you have to manually 'sync' and 'reboot' host.
+# !!! WTF? !!! Then run 'make vmd' and 'make run' to start VM.
+
+# set editor
+#EDITOR = mcedit
 
 # encrypt _password_
 # use escaped double dollar \$$
@@ -22,7 +30,7 @@ UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 
 # I have read Makefile and set my password and key above.
 # Uncomment LETMERUN:
-##LETMERUN = yes
+#LETMERUN = yes
 
 all:
 	@echo 'Usage:'
@@ -43,7 +51,11 @@ all:
 .endif
 
 edit:
+.ifndef EDITOR
 	vi Makefile
+.else
+	${EDITOR} Makefile
+.endif
 
 .ifdef LETMERUN
 
@@ -79,10 +91,26 @@ image:
 	@cat vnd
 	fdisk -iy $$(<vnd)
 	#vi disklabel.auto
+.ifndef USEFDE
 	disklabel -T disklabel.auto -F etc/fstab -w -A $$(<vnd)
 	cat etc/fstab
 	newfs $$(<vnd)a
 	sync
+.else
+	echo 'RAID *' | disklabel -wAT- $$(<vnd)
+	@echo !!! Create new disk with password !!!
+	@echo bioctl -c C -l $$(<vnd)a softraid0
+	@echo ${FDEPASSWORD} | bioctl -s -C force -c C -l $$(<vnd)a softraid0
+	bioctl softraid0 | sed -n 's/^softraid0.*\(sd[0-9]*\).*/\1/p' | tail -n 1 >vndx
+	@cat vndx
+	dd if=/dev/zero of=/dev/r$$(<vndx)c bs=1m count=1
+	fdisk -iy $$(<vndx)
+	disklabel -T disklabel.auto -F etc/fstab -w -A $$(<vndx)
+	cat etc/fstab
+	newfs $$(<vndx)a
+	sync
+	bioctl -d $$(<vndx)
+.endif
 	vnconfig -u $$(<vnd)
 	rm vnd*
 
@@ -90,7 +118,17 @@ install:
 	mkdir -p mnt
 	vnconfig ${NAME}.img >vnd
 	@cat vnd
+.ifndef USEFDE
 	mount -w /dev/$$(<vnd)a mnt
+.else
+	@echo !!! Mount disk with password !!!
+	@echo bioctl -c C -l $$(<vnd)a softraid0
+	@echo ${FDEPASSWORD} | bioctl -s -c C -l $$(<vnd)a softraid0
+	@#bioctl -c C -l $$(<vnd)a softraid0
+	bioctl softraid0 | sed -n 's/^softraid0.*\(sd[0-9]*\).*/\1/p' | tail -n 1 >vndx
+	@cat vndx
+	mount -w -o sync /dev/$$(<vndx)a mnt
+.endif
 	rm -rf mnt/etc
 	@echo !!!! WAIT !!!!
 	tar -C mnt -xzphf base7*.tgz
@@ -104,8 +142,13 @@ install:
 	echo https://cdn.openbsd.org/pub/OpenBSD > mnt/etc/installurl
 	ln -fs /usr/share/zoneinfo/Europe/Moscow mnt/etc/localtime
 	cd mnt/dev && sh MAKEDEV all
+.ifndef USEFDE
 	@##installboot -v -r mnt/ $$(<vnd)
 	chroot mnt/ installboot -v -r / $$(<vnd)
+.else
+	##installboot -v -r mnt/ $$(<vndx)
+	chroot mnt/ installboot -v -r / $$(<vndx)
+.endif
 	rm -rf mnt/usr/share/relink/kernel/
 	@##chmod 1777 mnt/tmp
 .ifdef ADDROOT
@@ -125,7 +168,18 @@ install:
 	chroot mnt/ pkg_add -D snap ${ADDPKG}
 .endif
 	sync && sync && sync
-	umount -f mnt
+.ifdef USEFDE
+	@echo !!! WTF? !!! After error:
+	@echo !!! WTF? !!! 	umount: /.../vmtest/mnt: Device busy
+	@echo !!! WTF? !!! 	*** Error 1 in /.../vmtest (Makefile:nnn 'install')
+	@echo !!! WTF? !!! you have to manually 'sync' and 'reboot' host.
+	@echo !!! WTF? !!! Then run 'make vmd' and 'make run' to start VM.
+.endif
+	#umount -f mnt
+	umount mnt
+.ifdef USEFDE
+	bioctl -d $$(<vndx)
+.endif
 	vnconfig -u $$(<vnd)
 	rm vnd*
 	rm -rf mnt
