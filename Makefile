@@ -1,16 +1,6 @@
-NAME = vmtest
-
-# uncomment USEFDE to use image encryption
-#USEFDE = yes
-#FDEPASSWORD = password
-# !!! WTF? !!! After error:
-# !!! WTF? !!! 	umount: /.../vmtest/mnt: Device busy
-# !!! WTF? !!! 	*** Error 1 in /.../vmtest (Makefile:nnn 'install')
-# !!! WTF? !!! you have to manually 'sync' and 'reboot' host.
-# !!! WTF? !!! Then run 'make vmd' and 'make run' to start VM.
 
 # set editor
-#EDITOR = mcedit
+EDITOR = mcedit
 
 # encrypt _password_
 # use escaped double dollar \$$
@@ -26,23 +16,33 @@ USER = test
 UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 
 # add packages:
-##ADDPKG = unzip--iconv mc
+#ADDPKG = unzip--iconv mc
+
+# uncomment USEFDE to use image encryption
+#USEFDE = yes
+#FDEPASSWORD = password
+# !!! WTF? !!! After error:
+# !!! WTF? !!! 	umount: /.../vmtest/mnt: Device busy
+# !!! WTF? !!! 	*** Error 1 in /.../vmtest (Makefile:nnn 'install')
+# !!! WTF? !!! you have to manually 'sync' and 'reboot' host.
+# !!! WTF? !!! Then run 'make vmd' and 'make run' to start VM.
 
 # I have read Makefile and set my password and key above.
 # Uncomment LETMERUN:
-#LETMERUN = yes
+LETMERUN = yes
 
-all:
+help:
 	@echo 'Usage:'
 	@echo ' make edit - edit Makefile'
 .ifdef LETMERUN
-	@echo ' make [ delete | image | mount | fsck | umount | uconfig ] - image file operations'
+	@echo ' make [ list | delete | image | mount | fsck | umount | uconfig ] - image file operations'
+	@echo ' make status - show image status'
 	@echo ' make [ ftp | install ] - get files, install vm'
 	@echo ' make password - set root password'
 	@echo ' make adduser - add user and doas.conf'
 	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
-	@echo ' make status - show image|vm status'
-	@echo ' make [ delq | convert | runq ] - convert img to qcow2, start vm'
+	@echo ' make vmstatus - show vm status'
+	@echo ' make [ vmlist | delq | convert | runq ] - convert img to qcow2, start vm'
 	@echo ' make [ clones | runc ] - create qcow2 overlays, start TWO VMs'
 .else
 	@echo ''
@@ -59,22 +59,6 @@ edit:
 
 .ifdef LETMERUN
 
-test:
-	-make delete
-	-make delq
-	make image
-	make ftp
-	make install
-	make vmd
-	make convert
-	make clones
-	make runc
-
-status:
-	mount
-	vnconfig -l
-	vmctl status
-
 ftp:
 	@#sysupgrade -skn
 	@#rm -rf base7*.tgz
@@ -85,9 +69,18 @@ ftp:
 	ftp -T https://cdn.openbsd.org/pub/OpenBSD/snapshots/amd64/bsd
 	ftp -T https://cdn.openbsd.org/pub/OpenBSD/snapshots/amd64/bsd.rd
 
+.ifndef NAME
+NAME = vmtest
+.endif
+
+.ifndef SIZE
+SIZE = 1.5G
+.endif
+
 image:
-	vmctl create -s 1.5G ${NAME}.img
-	vnconfig ${NAME}.img >vnd
+	mkdir -p i
+	vmctl create -s ${SIZE} i/${NAME}.img
+	vnconfig i/${NAME}.img >vnd
 	@cat vnd
 	fdisk -iy $$(<vnd)
 	#vi disklabel.auto
@@ -116,7 +109,7 @@ image:
 
 install:
 	mkdir -p mnt
-	vnconfig ${NAME}.img >vnd
+	vnconfig i/${NAME}.img >vnd
 	@cat vnd
 .ifndef USEFDE
 	mount -w /dev/$$(<vnd)a mnt
@@ -186,7 +179,7 @@ install:
 
 password:
 	mkdir -p mnt
-	vnconfig ${NAME}.img >vnd
+	vnconfig i/${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
 	chroot mnt/ usermod -p ${PASSWORD} root
 	@#head -n 1 mnt/etc/master.passwd
@@ -200,7 +193,7 @@ password:
 
 adduser:
 	mkdir -p mnt
-	vnconfig ${NAME}.img >vnd
+	vnconfig i/${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
 	rm -rf mnt/home/${USER}
 	chroot mnt/ adduser -batch ${USER} users ${USER} ${UPASS} -q -noconfig
@@ -216,7 +209,7 @@ adduser:
 	rm -rf mnt
 
 fsck:
-	vnconfig ${NAME}.img >vnd
+	vnconfig i/${NAME}.img >vnd
 	fsck -fy /dev/$$(<vnd)a
 	sync
 	vnconfig -u $$(<vnd)
@@ -224,7 +217,7 @@ fsck:
 
 mount:
 	mkdir -p mnt
-	vnconfig ${NAME}.img >vnd
+	vnconfig i/${NAME}.img >vnd
 	mount -w /dev/$$(<vnd)a mnt
 	mc mnt
 	sync
@@ -232,12 +225,14 @@ mount:
 	vnconfig -u $$(<vnd)
 	rm vnd
 	rm -rf mnt
+
 umount:
 	sync
 	umount mnt
 	vnconfig -u $$(<vnd)
 	rm vnd
 	rm -rf mnt
+
 uconfig:
 	vnconfig -u $$(<vnd)
 	rm vnd
@@ -246,61 +241,172 @@ uconfig:
 mountrd:
 	gzcat bsd.rd > bsdrd
 	rdsetroot -dx bsdrd ramdisk
-	mkdir -p mnt
-	vnconfig ramdisk >vnd
-	mount -w /dev/$$(<vnd)a mnt
-	mc mnt
-	umount mnt
-	vnconfig -u $$(<vnd)
-	rm vnd
+	mkdir -p mntrd
+	vnconfig ramdisk >vndrd
+	mount -w /dev/$$(<vndrd)a mntrd
+	mc mntrd
+	umount mntrd
+	vnconfig -u $$(<vndrd)
+	rm vndrd
 	#rdsetroot bsdrd ramdisk
 	#gzip bsdrd -o bsd.rd
 	#chmod 666 bsd.rd
-	rm -rf mnt ramdisk
+	rm -rf mntrd ramdisk
+
+status:
+	@echo Mount points:
+	@mount
+	@echo Attached Volumes:
+	@vnconfig -l
+
+list:
+	ls i/*.img
 
 delete:
-	rm *.img
+	rm i/*.img
 
-delq:
-	rm *.qcow2
+.ifndef SRC
+SRC = ${NAME}
+.endif
+
+.ifndef DST
+DST = ${NAME}
+.endif
 
 convert:
-	vmctl create -i ${NAME}.img ${NAME}.qcow2
+	mkdir -p q
+	vmctl create -i i/${SRC}.img q/${DST}.qcow2
+
+listq:
+	ls q/*.qcow2
+
+delq:
+	rm q/*.qcow2
+
+.ifndef VM
+VM = ${SRC}
+.endif
+
+vmcreate:
+	cd q && vmctl create -b ${SRC}.qcow2 ${VM}0.qcow2
 
 clones:
-	vmctl create -b ${NAME}.qcow2 ${NAME}1.qcow2
-	vmctl create -b ${NAME}.qcow2 ${NAME}2.qcow2
+	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}1.qcow2
+	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}2.qcow2
+
+vmlist:
+	cd q && ls *.qcow2 | sed -e "/^vmtest.qcow2$$/d;s/.qcow2//"
 
 vmd:
 	rcctl -f start vmd
 	sysctl net.inet.ip.forwarding=1
-	echo "pass out on egress from 100.64.0.0/10 to any nat-to (egress)" | pfctl -f-
+	make pfreset
+##	echo "pass out on egress from 100.64.0.0/10 to any nat-to (egress)" | pfctl -f-
 
 run:
-	@echo ====================
-	@echo  Login: root
-	@echo  Your password hash: ${PASSWORD}
-	@echo  Exit: ~.
-	@echo ====================
-	@##vmctl start -c -m 64M -L -d ${NAME}.img "${NAME}"
-	vmctl start -c -m 256M -L -d ${NAME}.img "${NAME}"
+	@#echo ====================
+	@#echo  Login: root
+	@#echo  Your password hash: ${PASSWORD}
+	@#echo  Exit: ~.
+	@#echo ====================
+	@##vmctl start -c -m 64M -L -d i/${NAME}.img "${NAME}"
+	vmctl start -c -m 256M -L -d i/${NAME}.img "${NAME}"
 
-runq:
-	@echo ====================
-	@echo  Login: root
-	@echo  Your password hash: ${PASSWORD}
-	@echo  Exit: ~.
-	@echo ====================
-	vmctl start -c -m 256M -L -d ${NAME}.qcow2 "${NAME}"
+#runq:
+#	cd q && vmctl start -c -m 256M -L -d ${NAME}0.qcow2 "${NAME}"
+
+vmstart:
+	cd q && vmctl start -m 256M -L -d ${VM}.qcow2 "${VM}"
+
+vmstartc:
+	cd q && vmctl start -c -m 256M -L -d ${VM}.qcow2 "${VM}"
+
+console:
+	vmctl console ${VM}
+
+vmstop:
+.ifndef VM
+	vmctl stop "${NAME}"
+.else
+	vmctl stop "${VM}"
+.endif
+
+vmstatus:
+	@echo Running VMs:
+	@vmctl status
+	@# | fgrep -iv pid | tr -s '[:blank:]' '\t' | cut -f 2,10
+	@echo IP addresses:
+	@ifconfig tap | awk 'BEGIN{d[3]="not_vm"}; /description/ {split($$2, d, "-")} ; \
+	/inet/ {split($$2, a, ".") ; print d[3], a[1]"."a[2]"."a[3]"."a[4]+1, d[2] ; d[3]="not_vm" }'
+
+ssh:
+.ifndef VM
+	@echo Run: make VM=name ssh
+.else
+	ssh -o "StrictHostKeyChecking off" $$(ifconfig tap | \
+	awk 'BEGIN{d[3]="not_vm"}; /description/ {split($$2, d, "-")} ; \
+	/inet/ {split($$2, a, ".") ; print d[3], a[1]"."a[2]"."a[3]"."a[4]+1, d[2] ; d[3]="not_vm" }' | \
+	fgrep if0 | fgrep ${VM} | tr -s '[:blank:]' '\t' | cut -f 2)
+.endif
 
 runc:
 	tmux \
-	new-session  'vmctl start -c -m 256M -L -d ${NAME}1.qcow2 "${NAME}1"' \; \
-	split-window -h 'vmctl start -c -m 256M -L -d ${NAME}2.qcow2 "${NAME}2"'
-	@## vmctl start -c -m 256M -L -d ${NAME}.qcow2 "${NAME}"
+	new-session  'sh' \; \
+	split-window 'cd q && vmctl start -c -m 256M -L -d ${NAME}1.qcow2 "${NAME}1"' \; \
+	split-window -h 'cd q && vmctl start -c -m 256M -L -d ${NAME}2.qcow2 "${NAME}2"'
 
-stop:
-	vmctl stop "${NAME}"
+pfrules:
+	pfctl -s rules
+
+.ifndef VM
+VM = vmtest
+.endif
+
+pfreset:
+	echo "pass out on egress from 100.64.0.0/10 to any nat-to (egress)" | pfctl -f-
+
+.ifndef PORT
+PORT = 22
+.endif
+
+vmnat:
+	pfctl -s rules > pftmp
+	cat pftmp
+	ifconfig tap | awk 'BEGIN{d[3]="not_vm"}; /description/ {split($$2, d, "-")} ; \
+	/inet/ {split($$2, a, ".") ; print d[3], a[1]"."a[2]"."a[3]"."a[4]+1, d[2] ; d[3]="not_vm" }' | \
+	fgrep if0 | fgrep ${VM} | tr -s '[:blank:]' '\t' | cut -f 2 > ${VM}ip
+	cat ${VM}ip
+	vmctl status | fgrep -i ${VM} | tr -s '[:blank:]' '\t' | cut -f 2 > ${VM}id
+	cat ${VM}id
+	echo 1024*$$(<${VM}id)+${PORT} | bc > ${VM}port
+	@echo PORT= $$(<${VM}port)
+	echo "pass in on egress proto tcp from any to any port $$(<${VM}port) \
+	rdr-to $$(<${VM}ip) port ${PORT} " >> pftmp
+	cat pftmp
+	cat pftmp | pfctl -f-
+
+DEBUG = yes
+
+.ifdef DEBUG
+
+tlist:
+	@echo Targets available:
+	@grep -e "^[[:alnum:]]*:" Makefile | sort | tr -s ':\n' ' '
+	@echo ''
+##	@grep -e "^[[:alnum:]]*:" Makefile | sort
+
+test:
+	-make delete
+	-make delq
+	-make ftp
+	make vmd
+	make image
+	make install
+	make convert
+	make clones
+	make runc
+
+.endif
 
 # LETMERUN end
 .endif
