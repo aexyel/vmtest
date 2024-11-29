@@ -315,21 +315,21 @@ run:
 #runq:
 #	cd q && vmctl start -c -m 256M -L -d ${NAME}0.qcow2 "${NAME}"
 
+.ifndef RAM
+RAM = 256M
+.endif
+
 vmstart:
-	cd q && vmctl start -m 256M -L -d ${VM}.qcow2 "${VM}"
+	cd q && vmctl start -m ${RAM} -L -d ${VM}.qcow2 "${VM}"
 
 vmstartc:
-	cd q && vmctl start -c -m 256M -L -d ${VM}.qcow2 "${VM}"
+	cd q && vmctl start -c -m ${RAM} -L -d ${VM}.qcow2 "${VM}"
 
 console:
 	vmctl console ${VM}
 
 vmstop:
-.ifndef VM
-	vmctl stop "${NAME}"
-.else
 	vmctl stop "${VM}"
-.endif
 
 vmstatus:
 	@echo Running VMs:
@@ -384,6 +384,13 @@ vmnat:
 	rdr-to $$(<${VM}ip) port ${PORT} " >> pftmp
 	cat pftmp
 	cat pftmp | pfctl -f-
+
+vmconf:
+	@echo "vm \"${NAME}\" {\n\tdisable\n\tmemory ${RAM}\n\tdisk \"${.CURDIR}/q/${NAME}.qcow2\"\n\tlocal interface\n\towner ${USER}\n}" > ${NAME}.conf
+	cat ${NAME}.conf
+	@echo "add 'include \"${.CURDIR}/${NAME}.conf\"' to /etc/vm.conf and restart vmd"
+	@echo "Then run 'vmctl start|stop [-c] ${NAME}'"
+
 
 DEBUG = yes
 
