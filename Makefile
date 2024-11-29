@@ -386,10 +386,10 @@ vmnat:
 	cat pftmp | pfctl -f-
 
 vmconf:
-	@echo "vm \"${NAME}\" {\n\tdisable\n\tmemory ${RAM}\n\tdisk \"${.CURDIR}/q/${NAME}.qcow2\"\n\tlocal interface\n\towner ${USER}\n}" > ${NAME}.conf
-	cat ${NAME}.conf
-	@echo "add 'include \"${.CURDIR}/${NAME}.conf\"' to /etc/vm.conf and restart vmd"
-	@echo "Then run 'vmctl start|stop [-c] ${NAME}'"
+	@echo "vm \"${VM}\" {\n\tdisable\n\tmemory ${RAM}\n\tdisk \"${.CURDIR}/q/${VM}.qcow2\"\n\tlocal interface\n\towner ${USER}\n}" > ${VM}.conf
+	cat ${VM}.conf
+	@echo "add 'include \"${.CURDIR}/${VM}.conf\"' to /etc/vm.conf and restart vmd"
+	@echo "Then run 'vmctl start|stop [-c] ${VM}'"
 
 
 DEBUG = yes
