@@ -33,29 +33,45 @@ LETMERUN = yes
 
 help:
 	@echo 'Usage:'
+	@echo ' make [ help ] - list commands'
 	@echo ' make edit - edit Makefile'
 .ifdef LETMERUN
-	@echo ' make [ list | delete | image | mount | fsck | umount | uconfig ] - image file operations'
-	@echo ' make status - show image status'
-	@echo ' make [ ftp | install ] - get files, install vm'
-	@echo ' make password - set root password'
-	@echo ' make adduser - add user and doas.conf'
-	@echo ' make [ vmd | run | stop ] - start vmd, start|stop vm'
-	@echo ' make vmstatus - show vm status'
-	@echo ' make [ vmlist | delq | convert | runq ] - convert img to qcow2, start vm'
-	@echo ' make [ clones | runc ] - create qcow2 overlays, start TWO VMs'
+	@echo '--- vmd ---'
+	@echo ' make vmd - start vmd'
+	@echo '--- Image operations ---'
+	@echo ' make ftp - get files'
+	@echo ' make [NAME=imgname SIZE=imgsize] image'
+	@echo ' make [NAME=imgname] [ install | password | adduser | fsck | mount ]'
+	@echo ' make [ status | list | delete | umount | uconfig ]'
+	@echo '--- qcow2  operations ---'
+	@echo ' make [NAME=imgname RAM=size] run - start vm from image'
+	@echo ' make [ listq | delq ]'
+	@echo ' make [SRC=imgname DST=qcow2name] convert - convert img to qcow2'
+	@echo ' make [ clones | runc | test] - create qcow2 overlays, start TWO VMs'
+	@echo '--- VM operations ---'
+	@echo ' make [VM=name SRC=qcow2name] vmcreate'
+	@echo ' make vmlist'
+	@echo ' make [VM=name RAM=size] [ vmstart | vmstartc ]'
+	@echo ' make vmstatus'
+	@echo ' make [VM=name] vmstop'
+	@echo ' make [VM=name] ssh'
+	@echo ' make [VM=name] console'
+	@echo ' make [VM=name RAM=size] vmconf' - create vm.conf file
+	@echo '--- Network operations ---'
+	@echo ' make [ pfreset | pfrules ]'
+	@echo ' make [VM=name PORT=port] vmnat'
 .else
 	@echo ''
 	@echo 'You have to set configuration variables on top of Makefile.'
 	@echo 'And review disklabel.auto template file.'
 .endif
 
-edit:
 .ifndef EDITOR
-	vi Makefile
-.else
-	${EDITOR} Makefile
+EDITOR = vi
 .endif
+
+edit:
+	${EDITOR} Makefile
 
 .ifdef LETMERUN
 
