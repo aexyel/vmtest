@@ -5,6 +5,16 @@ DEBUG = yes
 # set editor
 EDITOR = mcedit
 
+# Used mirror
+INSTALLURL = https://cdn.openbsd.org/pub/OpenBSD
+# use snapshots
+RELEASE = snapshots
+# or OS version
+#RELEASE = 7.6
+
+# look into /usr/share/zoneinfo/
+TZ = Europe/Moscow
+
 # encrypt _password_
 # use escaped double dollar \$$
 
@@ -88,9 +98,9 @@ ftp:
 	@#cp /home/_sysupgrade/base7*.tgz .
 	@#cp /home/_sysupgrade/bsd .
 	@#cp /home/_sysupgrade/bsd.rd .
-	ftp -T https://cdn.openbsd.org/pub/OpenBSD/snapshots/amd64/base76.tgz
-	ftp -T https://cdn.openbsd.org/pub/OpenBSD/snapshots/amd64/bsd
-	ftp -T https://cdn.openbsd.org/pub/OpenBSD/snapshots/amd64/bsd.rd
+	ftp -T ${INSTALLURL}/${RELEASE}/amd64/base76.tgz
+	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd
+	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd.rd
 
 .ifndef NAME
 NAME = vmtest
@@ -153,7 +163,7 @@ install:
 	cp bsd mnt/
 	cp bsd.rd mnt/
 	cp etc/* mnt/etc/
-	@#cd mnt/etc && rm localtime && ln -s /usr/share/zoneinfo/Europe/Moscow localtime
+	@#cd mnt/etc && rm localtime && ln -s /usr/share/zoneinfo/${TZ} localtime
 	echo ${NAME}.my.domain > mnt/etc/myname
 	echo https://cdn.openbsd.org/pub/OpenBSD > mnt/etc/installurl
 	ln -fs /usr/share/zoneinfo/Europe/Moscow mnt/etc/localtime
