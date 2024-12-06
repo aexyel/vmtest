@@ -1,4 +1,7 @@
 
+# allow debug and demo
+DEBUG = yes
+
 # set editor
 EDITOR = mcedit
 
@@ -47,7 +50,9 @@ help:
 	@echo ' make [NAME=imgname RAM=size] run - start vm from image'
 	@echo ' make [ listq | delq ]'
 	@echo ' make [SRC=imgname DST=qcow2name] convert - convert img to qcow2'
-	@echo ' make [ clones | runc | test] - create qcow2 overlays, start TWO VMs'
+.ifdef DEBUG
+	@echo ' make [ clones | runc | test] - create qcow2 overlays, start TWO VMs, run demonstration'
+.endif
 	@echo '--- VM operations ---'
 	@echo ' make [VM=name SRC=qcow2name] vmcreate'
 	@echo ' make vmlist'
@@ -60,6 +65,8 @@ help:
 	@echo '--- Network operations ---'
 	@echo ' make [ pfreset | pfrules ]'
 	@echo ' make [VM=name PORT=port] vmnat'
+	@echo '--- Interface ---'
+	@echo ' make tmux - attach to all running VMs'
 .else
 	@echo ''
 	@echo 'You have to set configuration variables on top of Makefile.'
@@ -306,10 +313,6 @@ VM = ${SRC}
 vmcreate:
 	cd q && vmctl create -b ${SRC}.qcow2 ${VM}0.qcow2
 
-clones:
-	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}1.qcow2
-	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}2.qcow2
-
 vmlist:
 	cd q && ls *.qcow2 | sed -e "/^vmtest.qcow2$$/d;s/.qcow2//"
 
@@ -327,9 +330,6 @@ run:
 	@#echo ====================
 	@##vmctl start -c -m 64M -L -d i/${NAME}.img "${NAME}"
 	vmctl start -c -m 256M -L -d i/${NAME}.img "${NAME}"
-
-#runq:
-#	cd q && vmctl start -c -m 256M -L -d ${NAME}0.qcow2 "${NAME}"
 
 .ifndef RAM
 RAM = 256M
@@ -365,11 +365,17 @@ ssh:
 	fgrep if0 | fgrep ${VM} | tr -s '[:blank:]' '\t' | cut -f 2)
 .endif
 
-runc:
+tmux:
 	tmux \
-	new-session  'sh' \; \
-	split-window 'cd q && vmctl start -c -m 256M -L -d ${NAME}1.qcow2 "${NAME}1"' \; \
-	split-window -h 'cd q && vmctl start -c -m 256M -L -d ${NAME}2.qcow2 "${NAME}2"'
+	new-session -s vmtest -n master 'sh' \; \
+	$$(for vn in $$(vmctl status | fgrep -iv pid | tr -s '[:blank:]' '\t' | cut -f 10); \
+	do echo "; new-window -n $${vn} vmctl console $${vn} "; done;) \; \
+	new-window -n help 'echo "console: <Enter>~. to close\ntmux: C-b\n\
+	0..9 =Select windows 0 to 9\n\
+	n =Change to the next window.\n\
+	p =Change to the previous window.\n\
+	d = detach session\n\
+	Then \"tmux attach\" to return.\n" ; sh'
 
 pfrules:
 	pfctl -s rules
@@ -407,9 +413,6 @@ vmconf:
 	@echo "add 'include \"${.CURDIR}/${VM}.conf\"' to /etc/vm.conf and restart vmd"
 	@echo "Then run 'vmctl start|stop [-c] ${VM}'"
 
-
-DEBUG = yes
-
 .ifdef DEBUG
 
 tlist:
@@ -417,6 +420,19 @@ tlist:
 	@grep -e "^[[:alnum:]]*:" Makefile | sort | tr -s ':\n' ' '
 	@echo ''
 ##	@grep -e "^[[:alnum:]]*:" Makefile | sort
+
+clones:
+	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}1.qcow2
+	cd q && vmctl create -b ${NAME}.qcow2 ${NAME}2.qcow2
+
+#runq:
+#	cd q && vmctl start -c -m 256M -L -d ${NAME}0.qcow2 "${NAME}"
+
+runc:
+	tmux \
+	new-session  'sh' \; \
+	split-window 'cd q && vmctl start -c -m 256M -L -d ${NAME}1.qcow2 "${NAME}1"' \; \
+	split-window -h 'cd q && vmctl start -c -m 256M -L -d ${NAME}2.qcow2 "${NAME}2"'
 
 test:
 	-make delete
