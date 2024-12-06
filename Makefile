@@ -166,7 +166,7 @@ install:
 	@#cd mnt/etc && rm localtime && ln -s /usr/share/zoneinfo/${TZ} localtime
 	echo ${NAME}.my.domain > mnt/etc/myname
 	echo https://cdn.openbsd.org/pub/OpenBSD > mnt/etc/installurl
-	ln -fs /usr/share/zoneinfo/Europe/Moscow mnt/etc/localtime
+	ln -fs /usr/share/zoneinfo/${TZ} mnt/etc/localtime
 	cd mnt/dev && sh MAKEDEV all
 .ifndef USEFDE
 	@##installboot -v -r mnt/ $$(<vnd)
