@@ -39,3 +39,7 @@ make clones
 make runc
 
 ```
+
+# About
+## OpenBaSeD project
+Our goal is writing code for basic OpenBSD installation without external dependencies.
