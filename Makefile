@@ -10,7 +10,8 @@ INSTALLURL = https://cdn.openbsd.org/pub/OpenBSD
 # use snapshots
 RELEASE = snapshots
 # or OS version
-#RELEASE = 7.6
+#RELEASE = 7.7
+VER = 77
 
 # look into /usr/share/zoneinfo/
 TZ = Europe/Moscow
@@ -32,17 +33,19 @@ UPASS = "\$$2b\$$09\$$WdU3zN9tz4zG6x22LTUjJOk2iiSCSIe8HJxCKQLYKS7n6aEI3Lrr6"
 #ADDPKG = unzip--iconv mc
 
 # uncomment USEFDE to use image encryption
-#USEFDE = yes
-#FDEPASSWORD = password
+##USEFDE = yes
 # !!! WTF? !!! After error:
 # !!! WTF? !!! 	umount: /.../vmtest/mnt: Device busy
 # !!! WTF? !!! 	*** Error 1 in /.../vmtest (Makefile:nnn 'install')
 # !!! WTF? !!! you have to manually 'sync' and 'reboot' host.
 # !!! WTF? !!! Then run 'make vmd' and 'make run' to start VM.
+.ifdef USEFDE
+FDEPASSWORD = password
+.endif
 
 # I have read Makefile and set my password and key above.
 # Uncomment LETMERUN:
-LETMERUN = yes
+##LETMERUN = yes
 
 help:
 	@echo 'Usage:'
@@ -98,7 +101,7 @@ ftp:
 	@#cp /home/_sysupgrade/base7*.tgz .
 	@#cp /home/_sysupgrade/bsd .
 	@#cp /home/_sysupgrade/bsd.rd .
-	ftp -T ${INSTALLURL}/${RELEASE}/amd64/base76.tgz
+	ftp -T ${INSTALLURL}/${RELEASE}/amd64/base${VER}.tgz
 	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd
 	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd.rd
 
