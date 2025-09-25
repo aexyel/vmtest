@@ -166,6 +166,8 @@ install:
 	cp bsd mnt/
 	cp bsd.rd mnt/
 	cp etc/* mnt/etc/
+	chown root:wheel mnt/etc/hostname.vio0
+	chmod 540 mnt/etc/hostname.vio0
 	@#cd mnt/etc && rm localtime && ln -s /usr/share/zoneinfo/${TZ} localtime
 	echo ${NAME}.my.domain > mnt/etc/myname
 	echo https://cdn.openbsd.org/pub/OpenBSD > mnt/etc/installurl
