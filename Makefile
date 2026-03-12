@@ -10,8 +10,8 @@ INSTALLURL = https://cdn.openbsd.org/pub/OpenBSD
 # use snapshots
 RELEASE = snapshots
 # or OS version
-#RELEASE = 7.8
-VER = 78
+#RELEASE = 7.9
+VER = 79
 
 # look into /usr/share/zoneinfo/
 TZ = Europe/Moscow
