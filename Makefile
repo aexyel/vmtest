@@ -10,8 +10,11 @@ INSTALLURL = https://cdn.openbsd.org/pub/OpenBSD
 # use snapshots
 RELEASE = snapshots
 # or OS version
-#RELEASE = 8.9
+#RELEASE = 8.0
 VER = 80
+
+## uncomment for SMP
+#VCPUS = 2
 
 # look into /usr/share/zoneinfo/
 TZ = Europe/Moscow
@@ -101,9 +104,13 @@ ftp:
 	@#cp /home/_sysupgrade/base7*.tgz .
 	@#cp /home/_sysupgrade/bsd .
 	@#cp /home/_sysupgrade/bsd.rd .
-	ftp -T ${INSTALLURL}/${RELEASE}/amd64/base${VER}.tgz
+.ifdef VCPUS
+	ftp -T -o bsd ${INSTALLURL}/${RELEASE}/amd64/bsd.mp
+.else
 	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd
+.endif
 	ftp -T ${INSTALLURL}/${RELEASE}/amd64/bsd.rd
+	ftp -T ${INSTALLURL}/${RELEASE}/amd64/base${VER}.tgz
 
 .ifndef NAME
 NAME = vmtest
@@ -344,7 +351,11 @@ run:
 	@#echo  Exit: ~.
 	@#echo ====================
 	@##vmctl start -c -m 64M -L -d i/${NAME}.img "${NAME}"
+.ifdef VCPUS
+	vmctl start -c -p ${VCPUS} -m 256M -L -d i/${NAME}.img "${NAME}"
+.else
 	vmctl start -c -m 256M -L -d i/${NAME}.img "${NAME}"
+.endif
 
 .ifndef RAM
 RAM = 256M
