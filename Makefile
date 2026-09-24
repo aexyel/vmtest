@@ -10,8 +10,8 @@ INSTALLURL = https://cdn.openbsd.org/pub/OpenBSD
 # use snapshots
 RELEASE = snapshots
 # or OS version
-#RELEASE = 7.9
-VER = 79
+#RELEASE = 8.9
+VER = 80
 
 # look into /usr/share/zoneinfo/
 TZ = Europe/Moscow
@@ -160,7 +160,7 @@ install:
 .endif
 	rm -rf mnt/etc
 	@echo !!!! WAIT !!!!
-	tar -C mnt -xzphf base7*.tgz
+	tar -C mnt -xzphf base${VER}.tgz
 	tar -C mnt -xzphf mnt/var/sysmerge/etc.tgz
 	@#mc
 	cp bsd mnt/
